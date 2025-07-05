@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Forecast Results</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+</head>
+<body>
+  <div class="container py-5">
+
+    <h3 class="text-center mb-4">🔮 Forecast for Next {{ forecast_days }} Day{{ 's' if forecast_days > 1 else '' }}</h3>
+    <p class="text-center">Based on your uploaded data, here’s what your future sales might look like:</p>
+
+    <!-- 📊 Forecast Chart -->
+    <div class="card shadow-sm p-3 mb-5">
+      <h4 class="text-center">📊 Forecast Chart</h4>
+      <div id="forecastChart" style="height: 500px;"></div>
+    </div>
+
+    <!-- 📄 CSV Preview -->
+    <div class="mb-5">
+      <h5 class="text-center">📄 Preview of Uploaded Sales Data (First 5 Rows)</h5>
+      <div class="table-responsive">
+        {{ preview_data | safe }}
+      </div>
+
+      <!-- 📏 RMSE and MAPE -->
+      <div class="row mt-4">
+        <div class="col-md-6">
+          <div class="alert alert-info text-center">
+            📏 <strong>RMSE:</strong> {{ rmse }}
+          </div>
+        </div>
+        <div class="col-md-6">
+          <div class="alert alert-info text-center">
+            📊 <strong>MAPE:</strong> {{ mape }}%
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 📅 Forecast Table -->
+    <table class="table table-bordered mt-4">
+      <thead class="table-light">
+        <tr>
+          <th>Date</th>
+          <th>Predicted Sales</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for date, value in predictions %}
+          <tr>
+            <td>{{ date }}</td>
+            <td>₹{{ "%.2f"|format(value) }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    <!-- ⬇️ Download + Back -->
+    <div class="text-center mt-4">
+      <a href="/download" class="btn btn-success me-2">⬇️ Download Forecast as CSV</a>
+      <a href="/" class="btn btn-outline-primary">← Upload Another File</a>
+    </div>
+  </div>
+
+  <!-- 📈 Plotly Chart Script -->
+  <script>
+    var forecastDates = {{ predictions | map(attribute=0) | list | tojson | safe }};
+    var forecastValues = {{ predictions | map(attribute=1) | list | tojson | safe }};
+    var historicalDates = {{ historical_data | map(attribute=0) | list | tojson | safe }};
+    var historicalValues = {{ historical_data | map(attribute=1) | list | tojson | safe }};
+
+    var trace1 = {
+      x: historicalDates,
+      y: historicalValues,
+      mode: 'lines+markers',
+      name: '📊 Actual Sales',
+      line: { color: 'green', width: 2 },
+      marker: { size: 6 }
+    };
+
+    var trace2 = {
+      x: forecastDates,
+      y: forecastValues,
+      mode: 'lines+markers',
+      name: '📈 Predicted Sales',
+      line: { color: 'orange', dash: 'dash', width: 2 },
+      marker: { size: 6 }
+    };
+
+    var layout = {
+      title: {
+        text: '📉 Sales Forecast - Actual vs Predicted',
+        font: { size: 24 },
+        xref: 'paper',
+        x: 0.05
+      },
+      legend: {
+        orientation: 'h',
+        x: 0.1,
+        y: 1.15,
+        font: { size: 14 }
+      },
+      xaxis: {
+        title: 'Date',
+        tickangle: -45,
+        tickfont: { size: 12 },
+        type: 'category',
+        automargin: true
+      },
+      yaxis: {
+        title: 'Sales (₹)',
+        tickfont: { size: 12 },
+        zeroline: true
+      },
+      margin: {
+        l: 50,
+        r: 30,
+        b: 100,
+        t: 80,
+        pad: 4
+      },
+      hovermode: 'closest',
+      responsive: true
+    };
+
+    Plotly.newPlot('forecastChart', [trace1, trace2], layout, { responsive: true });
+  </script>
+</body>
+</html>
